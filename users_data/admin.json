@@ -1,0 +1,15 @@
+{
+  "expenses": [
+    {
+      "id": "1772201417336",
+      "date": "2026-02-27 19:40:17",
+      "category": "Shopping",
+      "amount": 800.0,
+      "note": ""
+    }
+  ],
+  "monthly_budget": 0.0,
+  "profile": {
+    "avatar": null
+  }
+}
