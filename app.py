@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 # ---------------- STORAGE ----------------
+
 DATA_DIR = "users_data"
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 
@@ -16,6 +17,7 @@ if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 # ---------------- THEMES ----------------
+
 LIGHT_THEME = {
     "bg": "#f4f6fb",
     "card": "#ffffff",
@@ -35,6 +37,7 @@ DARK_THEME = {
 }
 
 # ---------------- HELPERS ----------------
+
 def hash_password(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
@@ -61,9 +64,11 @@ def currency(x):
     return f"₹{x:,.2f}"
 
 # ================= APP =================
+
 class ExpenseApp:
 
     def __init__(self):
+
         self.theme = LIGHT_THEME
         self.users = load_users()
         self.current_user = None
@@ -76,7 +81,7 @@ class ExpenseApp:
 
         self.login = tk.Tk()
         self.login.title("Expense Tracker Pro")
-        self.login.geometry("450x420")
+        self.login.geometry("420x420")
         self.login.configure(bg=self.theme["bg"])
 
         tk.Label(self.login,
@@ -92,12 +97,16 @@ class ExpenseApp:
         self.password.pack(pady=10,ipady=6)
 
         tk.Button(self.login,text="Login",
-                  bg=self.theme["accent"],fg="white",
-                  width=18,command=self.login_user).pack(pady=10)
+                  bg=self.theme["accent"],
+                  fg="white",
+                  width=20,
+                  command=self.login_user).pack(pady=10)
 
         tk.Button(self.login,text="Sign Up",
-                  bg=self.theme["accent2"],fg="white",
-                  width=18,command=self.signup_user).pack()
+                  bg=self.theme["accent2"],
+                  fg="white",
+                  width=20,
+                  command=self.signup_user).pack()
 
         self.login.mainloop()
 
@@ -139,12 +148,11 @@ class ExpenseApp:
 
         self.root=tk.Tk()
         self.root.title("Expense Tracker Pro")
-
-        self.root.state("zoomed")   # FULL SCREEN
-
+        self.root.state("zoomed")
         self.root.configure(bg=self.theme["bg"])
 
         # NAVBAR
+
         navbar=tk.Frame(self.root,bg=self.theme["accent"],height=60)
         navbar.pack(fill="x")
 
@@ -164,6 +172,7 @@ class ExpenseApp:
                   command=self.logout).pack(side="right")
 
         # SIDEBAR
+
         sidebar=tk.Frame(self.root,bg=self.theme["card"],width=220)
         sidebar.pack(side="left",fill="y")
 
@@ -190,18 +199,6 @@ class ExpenseApp:
                   fg=self.theme["text"],
                   command=command).pack(pady=5)
 
-    def toggle_theme(self):
-
-        self.theme=DARK_THEME if self.theme==LIGHT_THEME else LIGHT_THEME
-        self.root.destroy()
-        self.build_main()
-
-    def logout(self):
-
-        save_user_data(self.current_user,self.data)
-        self.root.destroy()
-        self.__init__()
-
 # ---------------- DASHBOARD ----------------
 
     def show_dashboard(self):
@@ -210,16 +207,37 @@ class ExpenseApp:
             w.destroy()
 
         total=sum(e["amount"] for e in self.data["expenses"])
+        count=len(self.data["expenses"])
 
         tk.Label(self.content,
-                 text="Dashboard",
-                 font=("Segoe UI",22,"bold"),
-                 bg=self.theme["bg"]).pack(pady=20)
+                 text="📊 Dashboard",
+                 font=("Segoe UI",26,"bold"),
+                 bg=self.theme["bg"],
+                 fg=self.theme["accent"]).pack(pady=20)
 
-        tk.Label(self.content,
-                 text=f"Total Spent: {currency(total)}",
-                 font=("Segoe UI",16),
-                 bg=self.theme["bg"]).pack()
+        cards=tk.Frame(self.content,bg=self.theme["bg"])
+        cards.pack()
+
+        def card(title,value):
+
+            c=tk.Frame(cards,
+                       bg=self.theme["card"],
+                       padx=40,
+                       pady=25)
+
+            tk.Label(c,text=title,
+                     font=("Segoe UI",12),
+                     bg=self.theme["card"]).pack()
+
+            tk.Label(c,text=value,
+                     font=("Segoe UI",22,"bold"),
+                     bg=self.theme["card"],
+                     fg=self.theme["accent"]).pack()
+
+            c.pack(side="left",padx=20)
+
+        card("Total Spent",currency(total))
+        card("Total Expenses",count)
 
 # ---------------- ADD EXPENSE ----------------
 
@@ -230,34 +248,34 @@ class ExpenseApp:
 
         tk.Label(self.content,
                  text="💸 Add Expense",
-                 font=("Segoe UI",22,"bold"),
+                 font=("Segoe UI",24,"bold"),
                  bg=self.theme["bg"],
                  fg=self.theme["accent"]).pack(pady=20)
 
         form=tk.Frame(self.content,bg=self.theme["card"],padx=40,pady=30)
-        form.pack()
+        form.pack(pady=10)
 
-        tk.Label(form,text="Category",bg=self.theme["card"]).grid(row=0,column=0,pady=6)
+        labels=["Category","Description","Amount","Date"]
+
+        for i,l in enumerate(labels):
+            tk.Label(form,text=l,bg=self.theme["card"],
+                     font=("Segoe UI",11)).grid(row=i,column=0,padx=10,pady=8,sticky="w")
 
         category=ttk.Combobox(form,
-            values=["Food","Travel","Shopping","Bills","Health","Other"])
+            values=["Food","Travel","Shopping","Bills","Health","Other"],
+            width=25)
+
         category.grid(row=0,column=1)
         category.set("Food")
 
-        tk.Label(form,text="Description",bg=self.theme["card"]).grid(row=1,column=0)
-
-        desc=tk.Entry(form)
+        desc=tk.Entry(form,width=28)
         desc.grid(row=1,column=1)
 
-        tk.Label(form,text="Amount",bg=self.theme["card"]).grid(row=2,column=0)
-
-        amount=tk.Entry(form)
+        amount=tk.Entry(form,width=28)
         amount.grid(row=2,column=1)
 
-        date=tk.Entry(form)
+        date=tk.Entry(form,width=28)
         date.insert(0,datetime.now().strftime("%Y-%m-%d"))
-
-        tk.Label(form,text="Date",bg=self.theme["card"]).grid(row=3,column=0)
         date.grid(row=3,column=1)
 
         def add():
@@ -278,27 +296,35 @@ class ExpenseApp:
             save_user_data(self.current_user,self.data)
 
             messagebox.showinfo("Success","Expense Added")
-
             self.show_add_expense()
 
         tk.Button(form,text="Add Expense",
                   bg=self.theme["accent"],
                   fg="white",
-                  command=add).grid(row=4,columnspan=2,pady=10)
+                  width=20,
+                  command=add).grid(row=4,columnspan=2,pady=15)
 
         # TABLE
+
         table_frame=tk.Frame(self.content)
-        table_frame.pack(pady=30)
+        table_frame.pack(pady=20)
 
         columns=("Date","Category","Description","Amount")
 
-        tree=ttk.Treeview(table_frame,columns=columns,show="headings")
+        tree=ttk.Treeview(table_frame,
+                          columns=columns,
+                          show="headings",
+                          height=10)
 
         for col in columns:
             tree.heading(col,text=col)
-            tree.column(col,width=150)
+            tree.column(col,width=160)
 
-        tree.pack()
+        scrollbar=ttk.Scrollbar(table_frame,orient="vertical",command=tree.yview)
+        tree.configure(yscroll=scrollbar.set)
+
+        tree.grid(row=0,column=0)
+        scrollbar.grid(row=0,column=1,sticky="ns")
 
         for e in self.data["expenses"]:
             tree.insert("",tk.END,values=(
@@ -369,6 +395,20 @@ class ExpenseApp:
 
         messagebox.showinfo("Imported","CSV Loaded")
         self.show_add_expense()
+
+# ---------------- OTHER ----------------
+
+    def toggle_theme(self):
+
+        self.theme=DARK_THEME if self.theme==LIGHT_THEME else LIGHT_THEME
+        self.root.destroy()
+        self.build_main()
+
+    def logout(self):
+
+        save_user_data(self.current_user,self.data)
+        self.root.destroy()
+        self.__init__()
 
 # ---------------- RUN ----------------
 
