@@ -1,17 +1,4 @@
 {
-  "expenses": [
-    {
-      "category": "Shopping",
-      "description": "",
-      "amount": 300.0,
-      "date": "2026-03-10"
-    },
-    {
-      "category": "Travel",
-      "description": "",
-      "amount": 600.0,
-      "date": "2026-03-10"
-    }
-  ],
-  "monthly_budget": 2000.0
+  "expenses": [],
+  "monthly_budget": 0
 }
