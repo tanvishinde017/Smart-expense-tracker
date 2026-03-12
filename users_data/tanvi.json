@@ -1,4 +1,11 @@
 {
-  "expenses": [],
-  "monthly_budget": 0
+  "expenses": [
+    {
+      "date": "2026-03-12",
+      "category": "Shopping",
+      "description": "",
+      "amount": 200.0
+    }
+  ],
+  "monthly_budget": 500.0
 }
