@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import json
 import os
 import hashlib
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import csv
 
 # =====================================================
 # STORAGE & THEME
@@ -71,6 +72,7 @@ class ExpenseApp:
         self.current_user = None
         self.data = None
         self.root = None
+        self.alert_shown = False
         self.build_login()
 
     def build_login(self):
@@ -93,7 +95,7 @@ class ExpenseApp:
         self.password_ent = tk.Entry(frame, show="*", width=30, font=("Segoe UI", 12))
         self.password_ent.pack(pady=10)
 
-        tk.Button(frame, text="Login", bg=THEME["gold"], fg="black", font=("Segoe UI", 10, "bold"),
+        tk.Button(frame, text="Login", bg=THEME["gold"], fg="black",
                   width=20, height=2, bd=0, command=self.login_user).pack(pady=10)
 
         tk.Button(frame, text="Create Account", bg=THEME["card"], fg="white",
@@ -128,7 +130,7 @@ class ExpenseApp:
         self.users[user] = {"password": hash_password(pw)}
         save_users(self.users)
         save_user_data(user, {"expenses": [], "monthly_budget": 0, "budget_history": []})
-        messagebox.showinfo("Success", "Account Created! You can now log in.")
+        messagebox.showinfo("Success", "Account Created!")
 
     def build_main(self):
         self.root = tk.Tk()
@@ -155,106 +157,173 @@ class ExpenseApp:
         self.root.mainloop()
 
     def nav_button(self, parent, text, cmd):
-        tk.Button(parent, text=text, width=20, pady=10, bg=THEME["card"], fg="white",
-                  bd=0, font=("Segoe UI", 10), cursor="hand2", command=cmd).pack(pady=5)
+        btn = tk.Label(parent, text=text, width=20, pady=10,
+                       bg=THEME["card"], fg="white",
+                       font=("Segoe UI", 10), cursor="hand2")
+        btn.pack(pady=5)
 
+        btn.bind("<Enter>", lambda e: btn.config(bg="#2a2a2a"))
+        btn.bind("<Leave>", lambda e: btn.config(bg=THEME["card"]))
+        btn.bind("<Button-1>", lambda e: cmd())
+
+    # ================= FIXED DASHBOARD =================
     def show_dashboard(self):
-        for w in self.content.winfo_children(): w.destroy()
+        for w in self.content.winfo_children():
+            w.destroy()
 
         total = sum(e["amount"] for e in self.data["expenses"])
         budget = self.data["monthly_budget"]
         remain = budget - total
 
-        tk.Label(self.content, text="Financial Dashboard", font=("Segoe UI", 30, "bold"),
+        tk.Label(self.content, text="Financial Dashboard",
+                 font=("Segoe UI", 30, "bold"),
                  fg=THEME["gold"], bg=THEME["bg"]).pack(pady=20)
 
+        percent = (total / budget * 100) if budget > 0 else 0
+
+        # MESSAGE
+        if budget == 0:
+            msg = "⚠ Please set your monthly budget"
+            color = "orange"
+        elif percent >= 100:
+            msg = "🚨 Budget Exceeded!"
+            color = THEME["danger"]
+        elif percent >= 80:
+            msg = "⚠ Warning: You are close to your budget"
+            color = "orange"
+        else:
+            msg = "✅ You are managing your budget well"
+            color = "green"
+
+        tk.Label(self.content, text=msg,
+                 fg=color, bg=THEME["bg"],
+                 font=("Segoe UI", 14, "bold")).pack(pady=10)
+
+        # ALERT
+        if percent >= 80 and not self.alert_shown:
+            messagebox.showwarning("Budget Alert", "80% budget used!")
+            self.alert_shown = True
+        if percent < 80:
+            self.alert_shown = False
+
+        # PROGRESS BAR
+        progress = ttk.Progressbar(self.content, length=400)
+        progress.pack(pady=10)
+
+        label = tk.Label(self.content, text="", fg="white", bg=THEME["bg"])
+        label.pack()
+
+        def animate(val=0):
+            if val <= percent:
+                progress["value"] = val
+                label.config(text=f"{val:.1f}% used")
+                self.content.after(10, lambda: animate(val + 1))
+            else:
+                label.config(text=f"{percent:.1f}% used")
+
+        animate()
+
+        # CARDS
         frame = tk.Frame(self.content, bg=THEME["bg"])
-        frame.pack()
+        frame.pack(pady=20)
 
         def card(title, value):
             c = tk.Frame(frame, bg=THEME["card"], padx=40, pady=30)
             tk.Label(c, text=title, fg="white", bg=THEME["card"]).pack()
-            tk.Label(c, text=value, font=("Segoe UI", 22, "bold"), fg=THEME["gold"], bg=THEME["card"]).pack()
+            tk.Label(c, text=value, font=("Segoe UI", 22, "bold"),
+                     fg=THEME["gold"], bg=THEME["card"]).pack()
             c.pack(side="left", padx=20)
 
         card("Total Spent", currency(total))
         card("Budget", currency(budget))
         card("Remaining", currency(remain))
 
-        if budget == 0: msg = "Set a monthly budget to start tracking."
-        elif total > budget: msg = "⚠ You exceeded your monthly budget!"
-        elif remain < budget * 0.2: msg = "⚠ Budget almost finished."
-        else: msg = "✔ Your spending is under control."
-
-        tk.Label(self.content, text=msg, font=("Segoe UI", 16), fg="white", bg=THEME["bg"]).pack(pady=20)
-
+   
+    # ================= ADD EXPENSE WITH TABLE =================
     def show_add_expense(self):
         for w in self.content.winfo_children(): w.destroy()
 
-        tk.Label(self.content, text="Add New Expense", font=("Segoe UI", 26, "bold"),
+        tk.Label(self.content, text="Add New Expense",
+                 font=("Segoe UI", 26, "bold"),
                  fg=THEME["gold"], bg=THEME["bg"]).pack(pady=20)
 
         form = tk.Frame(self.content, bg=THEME["bg"])
         form.pack()
 
-        tk.Label(form, text="Amount:", fg="white", bg=THEME["bg"]).grid(row=0, column=0, pady=10)
         amt_ent = tk.Entry(form)
+        cat_ent = ttk.Combobox(form, values=["Food", "Rent", "Transport", "Shopping", "Bills", "Other"])
+
+        tk.Label(form, text="Amount:", fg="white", bg=THEME["bg"]).grid(row=0, column=0, pady=10)
         amt_ent.grid(row=0, column=1)
 
         tk.Label(form, text="Category:", fg="white", bg=THEME["bg"]).grid(row=1, column=0, pady=10)
-        cat_ent = ttk.Combobox(form, values=["Food", "Rent", "Transport", "Shopping", "Bills", "Other"])
         cat_ent.grid(row=1, column=1)
 
         def save():
             try:
-                amt = float(amt_ent.get())
-                cat = cat_ent.get()
-                if not cat: raise ValueError
-                
                 expense = {
                     "date": datetime.now().strftime("%Y-%m-%d"),
-                    "amount": amt,
-                    "category": cat
+                    "amount": float(amt_ent.get()),
+                    "category": cat_ent.get()
                 }
                 self.data["expenses"].append(expense)
                 save_user_data(self.current_user, self.data)
-                messagebox.showinfo("Success", "Expense Added")
-                self.show_dashboard()
+                self.show_add_expense()
             except:
                 messagebox.showerror("Error", "Invalid Input")
 
-        tk.Button(self.content, text="Save Expense", bg=THEME["gold"], command=save).pack(pady=20)
+        tk.Button(self.content, text="Save Expense", bg=THEME["gold"],
+                  command=save).pack(pady=10)
 
-    def set_budget(self):
-        for w in self.content.winfo_children(): w.destroy()
+        # TABLE
+        columns = ("Date", "Amount", "Category")
+        tree = ttk.Treeview(self.content, columns=columns, show="headings")
 
-        tk.Label(self.content, text="Budget Manager", font=("Segoe UI", 26, "bold"),
-                 fg=THEME["gold"], bg=THEME["bg"]).pack(pady=20)
+        for col in columns:
+            tree.heading(col, text=col)
 
-        tk.Label(self.content, text="Enter Monthly Budget:", fg="white", bg=THEME["bg"]).pack()
-        entry = tk.Entry(self.content, width=30)
-        entry.pack(pady=10)
+        for i, e in enumerate(self.data["expenses"]):
+            tree.insert("", "end", iid=i,
+                        values=(e["date"], e["amount"], e["category"]))
 
-        def update_budget():
-            try:
-                amt = float(entry.get())
-                self.data["monthly_budget"] = amt
-                save_user_data(self.current_user, self.data)
-                messagebox.showinfo("Saved", "Monthly Budget Updated")
-                self.show_dashboard()
-            except:
-                messagebox.showerror("Error", "Invalid number")
+        tree.pack(fill="both", expand=True, pady=20)
 
-        tk.Button(self.content, text="Update Budget", bg=THEME["gold"], fg="black",
-                  command=update_budget).pack(pady=10)
+        # DELETE
+        def delete():
+            selected = tree.selection()
+            if not selected: return
+            idx = int(selected[0])
+            del self.data["expenses"][idx]
+            save_user_data(self.current_user, self.data)
+            self.show_add_expense()
 
+        tk.Button(self.content, text="Delete Selected",
+                  bg=THEME["danger"], command=delete).pack()
+
+        # EXPORT
+        def export():
+            file = filedialog.asksaveasfilename(defaultextension=".csv")
+            if not file: return
+            with open(file, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["Date", "Amount", "Category"])
+                for e in self.data["expenses"]:
+                    writer.writerow([e["date"], e["amount"], e["category"]])
+            messagebox.showinfo("Exported", "Data exported successfully")
+
+        tk.Button(self.content, text="Export to Excel",
+                  bg=THEME["gold"], command=export).pack(pady=10)
+
+    # ================= GRAPHS =================
     def show_graphs(self):
         for w in self.content.winfo_children(): w.destroy()
 
-        tk.Label(self.content, text="Expense Insights", font=("Segoe UI", 26, "bold"),
+        tk.Label(self.content, text="Expense Insights",
+                 font=("Segoe UI", 26, "bold"),
                  fg=THEME["gold"], bg=THEME["bg"]).pack(pady=20)
 
-        graph_type = ttk.Combobox(self.content, values=["Pie", "Bar", "Monthly Trend"])
+        graph_type = ttk.Combobox(self.content,
+                                  values=["Pie", "Bar", "Monthly Trend", "Combined"])
         graph_type.set("Pie")
         graph_type.pack()
 
@@ -263,37 +332,55 @@ class ExpenseApp:
 
         def draw():
             for w in graph_frame.winfo_children(): w.destroy()
-            
-            if not self.data["expenses"]:
-                tk.Label(graph_frame, text="No data available", fg="white", bg=THEME["bg"]).pack()
-                return
 
             cats = {}
             months = {}
+
             for e in self.data["expenses"]:
                 cats[e["category"]] = cats.get(e["category"], 0) + e["amount"]
                 m = e["date"][:7]
                 months[m] = months.get(m, 0) + e["amount"]
 
-            fig = plt.Figure(figsize=(6, 4), dpi=100, facecolor=THEME["bg"])
+            fig = plt.Figure(figsize=(6, 4))
             ax = fig.add_subplot(111)
-            ax.set_facecolor(THEME["bg"])
 
             if graph_type.get() == "Pie":
-                ax.pie(cats.values(), labels=cats.keys(), autopct="%1.1f%%", textprops={'color':"w"})
+                ax.pie(cats.values(), labels=cats.keys(), autopct="%1.1f%%")
             elif graph_type.get() == "Bar":
-                ax.bar(cats.keys(), cats.values(), color=THEME["gold"])
-                ax.tick_params(colors='white')
+                ax.bar(cats.keys(), cats.values())
+            elif graph_type.get() == "Monthly Trend":
+                ax.plot(list(months.keys()), list(months.values()), marker="o")
             else:
-                sorted_months = sorted(months.keys())
-                ax.plot(sorted_months, [months[m] for m in sorted_months], marker="o", color=THEME["gold"])
-                ax.tick_params(colors='white')
+                ax.bar(cats.keys(), cats.values(), alpha=0.6)
+                ax.plot(list(months.keys()), list(months.values()), color="red")
+
+            ax.set_title("Expense Analysis")
+            ax.grid(True)
 
             canvas = FigureCanvasTkAgg(fig, master=graph_frame)
             canvas.draw()
-            canvas.get_tk_widget().pack(pady=10)
+            canvas.get_tk_widget().pack()
 
-        tk.Button(self.content, text="Generate Graph", bg=THEME["gold"], command=draw).pack(pady=10)
+        tk.Button(self.content, text="Generate Graph",
+                  bg=THEME["gold"], command=draw).pack(pady=10)
+
+    def set_budget(self):
+        for w in self.content.winfo_children(): w.destroy()
+
+        tk.Label(self.content, text="Budget Manager",
+                 font=("Segoe UI", 26, "bold"),
+                 fg=THEME["gold"], bg=THEME["bg"]).pack(pady=20)
+
+        entry = tk.Entry(self.content)
+        entry.pack(pady=10)
+
+        def update():
+            self.data["monthly_budget"] = float(entry.get())
+            save_user_data(self.current_user, self.data)
+            self.show_dashboard()
+
+        tk.Button(self.content, text="Update Budget",
+                  bg=THEME["gold"], command=update).pack()
 
     def logout(self):
         save_user_data(self.current_user, self.data)

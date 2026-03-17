@@ -1,11 +1,16 @@
 {
   "expenses": [
     {
-      "date": "2026-03-12",
-      "category": "Shopping",
-      "description": "",
-      "amount": 200.0
+      "date": "2026-03-17",
+      "amount": 500.0,
+      "category": "Shopping"
+    },
+    {
+      "date": "2026-03-17",
+      "amount": 200.0,
+      "category": "Rent"
     }
   ],
-  "monthly_budget": 500.0
+  "monthly_budget": 2000.0,
+  "budget_history": []
 }
