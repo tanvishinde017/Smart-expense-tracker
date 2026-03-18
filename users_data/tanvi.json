@@ -1,11 +1,5 @@
 {
-  "expenses": [
-    {
-      "date": "2026-03-18",
-      "amount": 0.0,
-      "category": "gf"
-    }
-  ],
+  "expenses": [],
   "monthly_budget": 2000.0,
   "budget_history": []
 }
