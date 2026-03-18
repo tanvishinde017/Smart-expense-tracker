@@ -1,14 +1,9 @@
 {
   "expenses": [
     {
-      "date": "2026-03-17",
-      "amount": 1500.0,
-      "category": "Bills"
-    },
-    {
-      "date": "2026-03-17",
-      "amount": 200.0,
-      "category": "Rent"
+      "date": "2026-03-18",
+      "amount": 0.0,
+      "category": "gf"
     }
   ],
   "monthly_budget": 2000.0,
