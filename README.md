@@ -1,12 +1,11 @@
 💰 Smart Expense Tracker
-📌 Overview
 
+📌 Overview
 Smart Expense Tracker is a college mini project developed to help users efficiently manage and monitor their daily expenses. The application enables users to record transactions, categorize spending, track total expenses, and maintain better financial discipline through structured budgeting.
 
 This project demonstrates the practical implementation of backend development, database integration, and full-stack web application design.
 
 🎯 Project Objective
-
 The primary objective of this project is to:
 
 Apply programming and web development concepts in a real-world scenario
@@ -20,7 +19,6 @@ Develop problem-solving and project structuring skills
 Gain hands-on experience with backend frameworks and deployment
 
 ✨ Key Features
-
 ➜ Add daily expense entries
 ➜ Categorize transactions (Food, Transport, Bills, Shopping, etc.)
 ➜ View complete transaction history
